@@ -9,12 +9,14 @@
 using namespace std;
 
 
-void keys_alice_bob(mpz_t clave_privada_alice, mpz_t clave_efimera_bob, mpz_t clave_publica_alice, mpz_t primo, mpz_t generador );
-void Gammal_encrypt(mpz_t clave_publica_alice,mpz_t clave_efimera_bob, mpz_t msg, mpz_t encrypted, mpz_t C_1, mpz_t C_2,mpz_t primo, mpz_t generador );
-void Gammal_decrypt(mpz_t clave_privada_alice, mpz_t C_1, mpz_t C_2, mpz_t primo, mpz_t descifrado);
 
+void keys_alice_bob(mpz_t clave_privada_alice, mpz_t clave_efimera_bob, 
+                    mpz_t clave_publica_alice, mpz_t primo_p, mpz_t primo_q, mpz_t generador );
 void inicialize_DSA(mpz_t p,mpz_t q, mpz_t g, int numBits );
-
+void DSA_signature(mpz_t clave_privada_alice, mpz_t clave_efimera_bob, 
+                    mpz_t msg, mpz_t r, mpz_t s,
+                    mpz_t primo_p, mpz_t primo_q, mpz_t generador );
+                    
 int main(){
     mpz_t generador, primo, q;
     mpz_t clave_publica_alice;
@@ -180,12 +182,27 @@ void DSA_signature(mpz_t clave_privada_alice, mpz_t clave_efimera_bob,
                     mpz_t msg, mpz_t r, mpz_t s,
                     mpz_t primo_p, mpz_t primo_q, mpz_t generador ){
 
+    mpz_t K_invert;
+    mpz_init(K_invert);
     // r = g^k mod p
     mpz_powm(r, generador, clave_efimera_bob, primo_p);
     // r = r mod q
-    
-    mpz_mod(r,r,primo_q)
+    mpz_mod(r,r,primo_q);
 
+    //xr mod q
+    mpz_mul(s, clave_privada_alice, r);
+    mpz_mod(s,s,primo_q);
+
+    // xr+z mod q
+    mpz_add(s, msg, s);
+    mpz_mod(s,s,primo_q);
+
+    // k^-1 mod q
+    mpz_invert(K_invert, clave_efimera_bob, primo_q);
+
+    // k^-1 * (xr+z) mod q
+    mpz_mul(s, K_invert, s);
+    mpz_mod(s,s,primo_q);
 }
 
 void Gammal_decrypt(mpz_t clave_privada_alice, 
