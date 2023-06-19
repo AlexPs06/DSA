@@ -4,8 +4,10 @@
 #include <string.h>
 #include <time.h>
 #include <iostream>
-
+#include <openssl/sha.h>
 #include <assert.h>
+#include <string>
+#include <iomanip>
 using namespace std;
 
 
@@ -16,47 +18,55 @@ void inicialize_DSA(mpz_t p,mpz_t q, mpz_t g, int numBits );
 void DSA_signature(mpz_t clave_privada_alice, mpz_t clave_efimera_bob, 
                     mpz_t msg, mpz_t r, mpz_t s,
                     mpz_t primo_p, mpz_t primo_q, mpz_t generador );
-                    
+
+std::string calcularSHA1(const std::string& mensaje);
+
 int main(){
-    mpz_t generador, primo, q;
+    mpz_t generador, primo_p, primo_q;
     mpz_t clave_publica_alice;
     mpz_t clave_privada_alice;
     mpz_t clave_efimera_bob;
 
     mpz_t encrypted, decrypted;
-    mpz_t mensaje;
-    mpz_t C_1;
-    mpz_t C_2;
+    mpz_t sha_mpz;
+    mpz_t r;
+    mpz_t s;
 
     mpz_init(generador);
-    mpz_init(q);
-    mpz_init(primo);
-    mpz_init(mensaje);
+    mpz_init(primo_q);
+    mpz_init(primo_p);
+    mpz_init(sha_mpz);
     mpz_init(clave_privada_alice);
     mpz_init(clave_publica_alice);
     mpz_init(clave_efimera_bob);
-    mpz_init(C_1);
-    mpz_init(C_2);
+    mpz_init(r);
+    mpz_init(s);
     mpz_init(encrypted);
     mpz_init(decrypted);
 
     
-    mpz_set_ui(mensaje, 65537);
     
     // mpz_init_set_str(generador, "2", 10); // Generador: 2
     // mpz_init_set_str(primo, "5809605995369958062791915965639201402176612226902900533702900882779736177890990861472094774477339581147373410185646378328043729800750470098210924487866935059164371588168047540943981644516632755067501626434556398193186628990071248660819361205119793693985433297036118232914410171876807536457391277857011849897410207519105333355801121109356897459426271845471397952675959440793493071628394122780510124618488232602464649876850458861245784240929258426287699705312584509625419513463605155428017165714465363094021609290561084025893662561222573202082865797821865270991145082200656978177192827024538990239969175546190770645685893438011714430426409338676314743571154537142031573004276428701433036381801705308659830751190352946025482059931306571004727362479688415574702596946457770284148435989129632853918392117997472632693078113129886487399347796982772784615865232621289656944284216824611318709764535152507354116344703769998514148343807", 10);   // Número primo: 353
+    std::string sha = "Hola, este es un mensaje de ejemplo";
+    sha = calcularSHA1(sha);
+
+    mpz_set_str(sha_mpz, sha.c_str(),16);
 
 
-    inicialize_DSA(primo, q, generador, 2048 );
+    inicialize_DSA(primo_p, primo_q, generador, 2048 );
 
 
     printf("--------------------------Ejemplo---------------------------------------------------\n");
 
     printf("generador: %s\n", mpz_get_str(NULL, 0, generador));
-    printf("primo p: %s\n", mpz_get_str(NULL, 0, primo));
-    printf("primo q: %s\n", mpz_get_str(NULL, 0, q));
+    printf("primo p: %s\n", mpz_get_str(NULL, 0, primo_p));
+    printf("primo q: %s\n", mpz_get_str(NULL, 0, primo_q));
     printf("------------------------------------------------------------------------------------\n");
 
+    keys_alice_bob(clave_privada_alice, clave_efimera_bob, clave_publica_alice,  primo_p,  primo_q, generador );
+
+    DSA_signature(clave_privada_alice, clave_efimera_bob, sha_mpz, r, s, primo_p, primo_q, generador );
     // printf("clave_privada_alice: %s\n", mpz_get_str(NULL, 0, clave_privada_alice));
     // printf("clave_publica_alice: %s\n", mpz_get_str(NULL, 0, clave_publica_alice));
     // printf("clave_efimera_bob: %s\n", mpz_get_str(NULL, 0, clave_efimera_bob));
@@ -70,13 +80,14 @@ int main(){
     // printf("\n");
 
     mpz_clear(generador);
-    mpz_clear(primo);
+    mpz_clear(primo_p);
+    mpz_clear(primo_q);
     mpz_clear(clave_publica_alice);
     mpz_clear(clave_privada_alice);
     mpz_clear(clave_efimera_bob);
-    mpz_clear(mensaje);
-    mpz_clear(C_1);
-    mpz_clear(C_2);
+    mpz_clear(sha_mpz);
+    mpz_clear(r);
+    mpz_clear(s);
     mpz_clear(decrypted);
     mpz_clear(encrypted);
    
@@ -205,27 +216,36 @@ void DSA_signature(mpz_t clave_privada_alice, mpz_t clave_efimera_bob,
     mpz_mod(s,s,primo_q);
 }
 
-void Gammal_decrypt(mpz_t clave_privada_alice, 
-                    mpz_t C_1, mpz_t C_2, mpz_t primo, 
-                    mpz_t descifrado){
-    mpz_t X;
-    mpz_init(X);
 
-    //X<- C_1^a mod p
-    mpz_powm(X, C_1, clave_privada_alice, primo);
 
-    //X< X^-1 mod p
-    mpz_invert(X, X, primo);
 
-    //C2*M
-    mpz_mul(descifrado, X, C_2);
-    //C2 mod P    
-    mpz_mod(descifrado, descifrado, primo);
 
-    mpz_clear(X);
+std::string calcularSHA256(const std::string& mensaje) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, mensaje.c_str(), mensaje.length());
+    SHA256_Final(hash, &sha256);
 
+    std::stringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
+    }
+
+    return ss.str();
 }
 
+std::string calcularSHA1(const std::string& mensaje) {
+    unsigned char hash[SHA_DIGEST_LENGTH];
+    SHA_CTX sha1;
+    SHA1_Init(&sha1);
+    SHA1_Update(&sha1, mensaje.c_str(), mensaje.length());
+    SHA1_Final(hash, &sha1);
 
+    std::stringstream ss;
+    for (int i = 0; i < SHA_DIGEST_LENGTH; ++i) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
+    }
 
-
+    return ss.str();
+}
