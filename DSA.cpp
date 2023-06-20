@@ -18,7 +18,9 @@ void inicialize_DSA(mpz_t p,mpz_t q, mpz_t g, int numBits );
 void DSA_signature(mpz_t clave_privada_alice, mpz_t clave_efimera_bob, 
                     mpz_t msg, mpz_t r, mpz_t s,
                     mpz_t primo_p, mpz_t primo_q, mpz_t generador );
-
+bool DSA_signature_verification(mpz_t clave_publica_alice, 
+                    mpz_t msg, mpz_t r, mpz_t s,
+                    mpz_t primo_p, mpz_t primo_q, mpz_t generador );
 std::string calcularSHA1(const std::string& mensaje);
 
 int main(){
@@ -67,6 +69,27 @@ int main(){
     keys_alice_bob(clave_privada_alice, clave_efimera_bob, clave_publica_alice,  primo_p,  primo_q, generador );
 
     DSA_signature(clave_privada_alice, clave_efimera_bob, sha_mpz, r, s, primo_p, primo_q, generador );
+
+
+
+    printf("clave_privada_alice: %s\n", mpz_get_str(NULL, 0, clave_privada_alice));
+    printf("clave_publica_alice: %s\n", mpz_get_str(NULL, 0, clave_publica_alice));
+    printf("clave_efimera_bob: %s\n", mpz_get_str(NULL, 0, clave_efimera_bob));
+    printf("------------------------------------------------------------------------------------\n");
+
+     printf("Firma r: %s\n", mpz_get_str(NULL, 0, r));
+    printf("Firma S: %s\n", mpz_get_str(NULL, 0, s));
+    printf("------------------------------------------------------------------------------------\n");
+    bool verificated =  DSA_signature_verification(clave_publica_alice, sha_mpz,  r,  s,  primo_p,  primo_q,  generador );
+    if(verificated){
+        printf("Firma verificada si corresponde\n");
+    }else{
+        printf("Firma no verificada no corresponde\n");
+
+    }
+
+    printf("------------------------------------------------------------------------------------\n");
+
     // printf("clave_privada_alice: %s\n", mpz_get_str(NULL, 0, clave_privada_alice));
     // printf("clave_publica_alice: %s\n", mpz_get_str(NULL, 0, clave_publica_alice));
     // printf("clave_efimera_bob: %s\n", mpz_get_str(NULL, 0, clave_efimera_bob));
@@ -217,6 +240,54 @@ void DSA_signature(mpz_t clave_privada_alice, mpz_t clave_efimera_bob,
 }
 
 
+bool DSA_signature_verification(mpz_t clave_publica_alice, 
+                    mpz_t msg, mpz_t r, mpz_t s,
+                    mpz_t primo_p, mpz_t primo_q, mpz_t generador ){
+
+    mpz_t w;
+    mpz_t u1;
+    mpz_t u2;
+    mpz_init(w);
+    mpz_init(u1);
+    mpz_init(u2);
+
+    // s^-1 mod q
+    mpz_invert(w, s, primo_q);
+
+    //zw mod q
+    mpz_mul(u1, msg, w);
+    mpz_mod(u1,u1,primo_q);
+
+    //rw mod q
+    mpz_mul(u2, r, w);
+    mpz_mod(u2,u2,primo_q);
+
+    // u1 = g^u1 mod p
+    mpz_powm(u1, generador, u1 , primo_p);
+        
+    // u2 = clave_publica_alice^u2 mod p
+    mpz_powm(u2, clave_publica_alice, u2, primo_p);
+
+    
+    // u2 = u2*u1 mod p
+    mpz_mul(u1, u1, u2);
+
+    mpz_mod(u1,u1,primo_p);
+
+    mpz_mod(u1,u1,primo_q);
+
+    int resultado = mpz_cmp(u1, r);
+    if (resultado == 0) {
+        printf("Verificacion : %s\n", mpz_get_str(NULL, 0, u1));
+        
+        return true;
+        // Las variables var1 y var2 son iguales
+    } else {
+        return false;
+        // Las variables var1 y var2 son diferentes
+    }
+
+}
 
 
 
