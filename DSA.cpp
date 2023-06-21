@@ -22,6 +22,7 @@ bool DSA_signature_verification(mpz_t clave_publica_alice,
                     mpz_t msg, mpz_t r, mpz_t s,
                     mpz_t primo_p, mpz_t primo_q, mpz_t generador );
 std::string calcularSHA1(const std::string& mensaje);
+std::string calcularSHA256(const std::string& mensaje);
 
 int main(){
     mpz_t generador, primo_p, primo_q;
@@ -45,22 +46,15 @@ int main(){
     mpz_init(s);
     mpz_init(encrypted);
     mpz_init(decrypted);
-
     
-    
-    // mpz_init_set_str(generador, "2", 10); // Generador: 2
-    // mpz_init_set_str(primo, "5809605995369958062791915965639201402176612226902900533702900882779736177890990861472094774477339581147373410185646378328043729800750470098210924487866935059164371588168047540943981644516632755067501626434556398193186628990071248660819361205119793693985433297036118232914410171876807536457391277857011849897410207519105333355801121109356897459426271845471397952675959440793493071628394122780510124618488232602464649876850458861245784240929258426287699705312584509625419513463605155428017165714465363094021609290561084025893662561222573202082865797821865270991145082200656978177192827024538990239969175546190770645685893438011714430426409338676314743571154537142031573004276428701433036381801705308659830751190352946025482059931306571004727362479688415574702596946457770284148435989129632853918392117997472632693078113129886487399347796982772784615865232621289656944284216824611318709764535152507354116344703769998514148343807", 10);   // Número primo: 353
     std::string sha = "Hola, este es un mensaje de ejemplo";
     sha = calcularSHA256(sha);
 
     mpz_set_str(sha_mpz, sha.c_str(),16);
 
-
     inicialize_DSA(primo_p, primo_q, generador, 2048 );
 
-
     printf("--------------------------Ejemplo---------------------------------------------------\n");
-
     printf("generador: %s\n", mpz_get_str(NULL, 0, generador));
     printf("primo p: %s\n", mpz_get_str(NULL, 0, primo_p));
     printf("primo q: %s\n", mpz_get_str(NULL, 0, primo_q));
@@ -70,14 +64,12 @@ int main(){
 
     DSA_signature(clave_privada_alice, clave_efimera_bob, sha_mpz, r, s, primo_p, primo_q, generador );
 
-
-
     printf("clave_privada_alice: %s\n", mpz_get_str(NULL, 0, clave_privada_alice));
     printf("clave_publica_alice: %s\n", mpz_get_str(NULL, 0, clave_publica_alice));
     printf("clave_efimera_bob: %s\n", mpz_get_str(NULL, 0, clave_efimera_bob));
     printf("------------------------------------------------------------------------------------\n");
 
-     printf("Firma r: %s\n", mpz_get_str(NULL, 0, r));
+    printf("Firma r: %s\n", mpz_get_str(NULL, 0, r));
     printf("Firma S: %s\n", mpz_get_str(NULL, 0, s));
     printf("------------------------------------------------------------------------------------\n");
     bool verificated =  DSA_signature_verification(clave_publica_alice, sha_mpz,  r,  s,  primo_p,  primo_q,  generador );
@@ -89,18 +81,6 @@ int main(){
     }
 
     printf("------------------------------------------------------------------------------------\n");
-
-    // printf("clave_privada_alice: %s\n", mpz_get_str(NULL, 0, clave_privada_alice));
-    // printf("clave_publica_alice: %s\n", mpz_get_str(NULL, 0, clave_publica_alice));
-    // printf("clave_efimera_bob: %s\n", mpz_get_str(NULL, 0, clave_efimera_bob));
-    // printf("------------------------------------------------------------------------------------\n");
-
-    // printf("Mensaje: %s\n", mpz_get_str(NULL, 0, mensaje));
-    // printf("Mensaje cifrado: %s\n", mpz_get_str(NULL, 0, encrypted));
-    // printf("Mensaje descifrado: %s\n", mpz_get_str(NULL, 0, decrypted));
-    // printf("------------------------------------------------------------------------------------\n");
-
-    // printf("\n");
 
     mpz_clear(generador);
     mpz_clear(primo_p);
@@ -139,7 +119,6 @@ void inicialize_DSA(mpz_t p,mpz_t q, mpz_t g, int numBits ){
         //genero un primo de 256
         mpz_nextprime (q, q);
 
-
         mpz_set_str(p, "89884656743115796742429711405763364460177151692783429800884652449310979263752253529349195459823881715145796498046459238345428121561386626945679753956400077352882071663925459750500807018254028771490434021315691357123734637046894876123496168716251735252662742462099334802433058472377674408598573487858308054417", 10);
         mpz_set_str(q, "1193447034984784682329306571139467195163334221569", 10);
 
@@ -171,7 +150,6 @@ void inicialize_DSA(mpz_t p,mpz_t q, mpz_t g, int numBits ){
         // e = g^q mod p
 
         mpz_powm(e, g, q, p);
-
 
         // g^q mod p == 1
         int result = mpz_cmp(e, condicion);
@@ -243,7 +221,6 @@ void DSA_signature(mpz_t clave_privada_alice, mpz_t clave_efimera_bob,
 bool DSA_signature_verification(mpz_t clave_publica_alice, 
                     mpz_t msg, mpz_t r, mpz_t s,
                     mpz_t primo_p, mpz_t primo_q, mpz_t generador ){
-
     mpz_t w;
     mpz_t u1;
     mpz_t u2;
@@ -267,7 +244,6 @@ bool DSA_signature_verification(mpz_t clave_publica_alice,
         
     // u2 = clave_publica_alice^u2 mod p
     mpz_powm(u2, clave_publica_alice, u2, primo_p);
-
     
     // u2 = u2*u1 mod p
     mpz_mul(u1, u1, u2);
@@ -279,12 +255,9 @@ bool DSA_signature_verification(mpz_t clave_publica_alice,
     int resultado = mpz_cmp(u1, r);
     if (resultado == 0) {
         printf("Verificacion : %s\n", mpz_get_str(NULL, 0, u1));
-        
         return true;
-        // Las variables var1 y var2 son iguales
     } else {
         return false;
-        // Las variables var1 y var2 son diferentes
     }
 
 }
